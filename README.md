@@ -12,10 +12,12 @@ ones that miss, and measures the edit before you ship it.
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/tastewise/mcp-whichtool?quickstart=1)
 
-![A failed test in a run's report: "Can I pick up Piranesi in Lyon today?" went to find_stores, three draws out of three, instead of check_stock](docs/images/failed.png)
+![whichtool on the bookshop demo: AI writes a test per tool, they run on Claude Haiku 4.5, one misroutes, Ask AI proposes a description, and the test passes with it](docs/images/demo.gif)
 
-*A run's report: one request reached the wrong tool on every draw. Ask AI explains why and proposes a
-description; Edit the description lets you write it, then try it on that test before anything is saved.*
+*On the bookshop demo: AI writes a test per tool, they run three draws each on Claude Haiku 4.5, and "Can I
+pick up Piranesi in Lyon today?" goes to `search_books` instead of `check_stock`. Ask AI explains why and
+proposes a description; tried on that test, it passes 3/3. Nothing is written until you save it. (Waits
+sped up.)*
 
 ## Try it in your browser
 

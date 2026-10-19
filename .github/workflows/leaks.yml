@@ -30,7 +30,14 @@ jobs:
         run: gitleaks git --config .gitleaks.toml --redact --no-banner .
 
       # The term list is a repo secret: it names customers and internal hosts, so it can't live in this repo.
+      # A pull request from a fork gets no secrets: there the step is skipped rather than failed, and the
+      # commits are checked once merged, on main. Everywhere else a missing secret still fails the check.
+      - name: Forbidden terms skipped for a fork
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: echo "::notice::A pull request from a fork gets no secrets; its commits are checked for forbidden terms on main."
+
       - name: Forbidden terms across the whole history
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         env:
           FORBIDDEN_TERMS: ${{ secrets.FORBIDDEN_TERMS }}
         run: |

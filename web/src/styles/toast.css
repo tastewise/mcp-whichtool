@@ -1,0 +1,11 @@
+/* On .Toastify, not :root: react-toastify injects its own :root defaults after this file. */
+.Toastify {
+  --toastify-color-info: var(--accent);
+  --toastify-color-success: var(--success);
+  --toastify-color-warning: var(--warning);
+  --toastify-color-error: var(--danger);
+  --toastify-font-family: var(--font-sans);
+  --toastify-toast-min-height: 44px;
+}
+.Toastify__toast { border-radius: var(--radius-md); font-size: 14px; }
+.Toastify__toast-body { white-space: pre-line; }

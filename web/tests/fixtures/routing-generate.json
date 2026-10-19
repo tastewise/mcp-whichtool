@@ -1,0 +1,4 @@
+{ "model": "claude-sonnet-5", "cost": 0.0201, "cases": [
+  { "id": "genres-list", "prompt": "Which genres do you shelve?", "expect": "list_genres" },
+  { "id": "genres-section", "prompt": "Do you have a poetry section?", "expect": "list_genres" }
+] }

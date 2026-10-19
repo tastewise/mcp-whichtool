@@ -1,0 +1,11 @@
+{ "revision": "rev-1", "tools": [
+    { "name": "search_books", "title": "Search the catalogue" },
+    { "name": "recommend_books", "title": "Recommend books" },
+    { "name": "track_order", "title": "Track an order" },
+    { "name": "list_genres", "title": "Genres" }
+  ],
+  "cases": [
+    { "id": "search-topic", "prompt": "Find me books about sourdough baking", "expect": "search_books" },
+    { "id": "recommend-from-title", "prompt": "I loved Piranesi, what should I read next?", "expect": "recommend_books" },
+    { "id": "order-where", "prompt": "Where's my order 4411?", "expect": "track_order" }
+  ] }

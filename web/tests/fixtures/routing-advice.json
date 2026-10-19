@@ -1,0 +1,3 @@
+{ "verdict": "change", "tool": "recommend_books", "original_description": "Suggest books a reader might like.", "suggested_description": "Suggest books a reader might like from a title they enjoyed. Use when the reader names a book and asks what to read next.",
+  "diagnosis": "The description never says it takes a title the reader liked, so 'what next' routes to the book details.", "rationale": "Naming the input and the question shape moves the boundary.", "risks": "Detail questions that name a title may now flip.",
+  "model": "claude-sonnet-5", "cost": 0.0412, "source_revision": "abc123" }

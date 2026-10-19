@@ -1,0 +1,60 @@
+name: leaks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        env:
+          VERSION: 8.30.1
+          SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          curl -sSfL -o gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz"
+          echo "${SHA256}  gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf gitleaks.tar.gz gitleaks
+          sudo mv gitleaks /usr/local/bin/
+
+      - name: Secrets across the whole history
+        run: gitleaks git --config .gitleaks.toml --redact --no-banner .
+
+      # The term list is a repo secret: it names customers and internal hosts, so it can't live in this repo.
+      - name: Forbidden terms across the whole history
+        env:
+          FORBIDDEN_TERMS: ${{ secrets.FORBIDDEN_TERMS }}
+        run: |
+          if [ -z "$FORBIDDEN_TERMS" ]; then
+            echo "::error::FORBIDDEN_TERMS secret is not set"
+            exit 1
+          fi
+          printf '%s\n' "$FORBIDDEN_TERMS" | sed '/^$/d' > "$RUNNER_TEMP/terms"
+          # -l prints only commit:path, so the matched term never reaches the public log.
+          # npm's lockfiles get a pass of their own, below: their integrity hashes are long runs of random
+          # base64 a short term can match by chance.
+          hits=$(git rev-list --all | xargs sh -c 'git grep -I -i -l -F -f "$0" "$@" -- . ":(exclude)**/package-lock.json"' "$RUNNER_TEMP/terms" || true)
+          # Every lockfile in every commit, without its "integrity" lines: package names, versions and the
+          # registry URLs each package was resolved from are still read.
+          for commit in $(git rev-list --all); do
+            for lockfile in $(git ls-tree -r --name-only "$commit" | grep -E '(^|/)package-lock\.json$' || true); do
+              if git show "$commit:$lockfile" | grep -v '"integrity":' | grep -q -i -F -f "$RUNNER_TEMP/terms"; then
+                hits="$hits"$'\n'"$commit:$lockfile"
+              fi
+            done
+          done
+          hits=$(printf '%s\n' "$hits" | sed '/^$/d')
+          if [ -n "$hits" ]; then
+            echo "::error::Forbidden terms found in:"
+            echo "$hits"
+            exit 1
+          fi

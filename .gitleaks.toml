@@ -1,0 +1,12 @@
+[extend]
+useDefault = true
+
+[[rules]]
+id = "aws-account-id-in-arn"
+description = "AWS account id inside an ARN"
+regex = '''arn:aws:[a-z0-9-]+:[a-z0-9-]*:\d{12}:'''
+
+[[rules]]
+id = "aws-sso-start-url"
+description = "AWS IAM Identity Center start URL"
+regex = '''d-[0-9a-f]{10}\.awsapps\.com'''

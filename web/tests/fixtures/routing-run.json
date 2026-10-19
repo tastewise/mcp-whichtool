@@ -1,0 +1,8 @@
+{ "id": "2026-09-09T15-02-11.json", "provider": "anthropic", "model": "claude-sonnet-5", "samples": 3,
+  "usage": { "input_tokens": 120000, "output_tokens": 4000, "cache_creation_input_tokens": 30000, "cache_read_input_tokens": 90000 },
+  "total": 3, "passed": 2, "result_mtime": 1788966131, "cost": 5.21,
+  "cases": [
+    { "id": "search-topic", "prompt": "Find me books about sourdough baking", "expect": "search_books", "hits": 3, "passed": true, "votes": [{ "tool": "search_books", "count": 3 }], "picks": ["search_books", "search_books", "search_books"] },
+    { "id": "recommend-from-title", "prompt": "I loved Piranesi, what should I read next?", "expect": "recommend_books", "hits": 1, "passed": false, "votes": [{ "tool": "get_book", "count": 2 }, { "tool": "recommend_books", "count": 1 }], "picks": ["get_book", "recommend_books", "get_book"] },
+    { "id": "order-where", "prompt": "Where's my order 4411?", "expect": "track_order", "hits": 3, "passed": true, "votes": [{ "tool": "track_order", "count": 3 }], "picks": ["track_order", "track_order", "track_order"] }
+  ] }

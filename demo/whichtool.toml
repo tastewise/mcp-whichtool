@@ -1,0 +1,11 @@
+# The demo project: the bookshop server in server.py, and twelve cases.
+# Keys go in demo/.env (run `whichtool keys` from this folder), never here.
+
+[routing]
+server = "http://127.0.0.1:8000/mcp"
+fixture = "routing_cases.json"
+model = "claude-opus-5-5"
+# The descriptions live in server.py, in this folder: an edit made from the console is measured
+# by the next run, before the server reloads.
+cwd = "."
+descriptions = "."

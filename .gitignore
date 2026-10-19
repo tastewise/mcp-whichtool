@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+web/dist/
+
+# Local config and secrets
+.env
+.env.*
+!.env.example
+
+# Tooling logs
+.a5c/
+.DS_Store
+.playwright-mcp/
+.whichtool/
+
+# Private instructions for Claude Code
+CLAUDE.local.md

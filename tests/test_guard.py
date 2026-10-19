@@ -63,3 +63,29 @@ async def test_a_rebound_domain_is_refused_before_any_route(method: str) -> None
 
     assert answer.status_code == 403
     assert "127.0.0.1" in answer.json()["detail"]
+
+
+async def test_in_a_codespace_its_forwarded_address_drives_the_console(monkeypatch) -> None:
+    monkeypatch.setenv("CODESPACE_NAME", "shiny-space-xyz")
+    monkeypatch.setenv("GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN", "app.github.dev")
+    forwarded = f"shiny-space-xyz-{PORT}.app.github.dev"
+    async with client(forwarded) as http:
+        read = await http.get("/act")
+        changed = await http.post("/act", headers={HEADER: "1", "origin": f"https://{forwarded}"})
+    # Only that address: another Codespace's, or another port's, stays refused.
+    async with client(f"other-space-{PORT}.app.github.dev") as http:
+        other = await http.get("/act")
+    async with client("shiny-space-xyz-9999.app.github.dev") as http:
+        wrong_port = await http.get("/act")
+
+    assert (read.status_code, changed.text) == (200, "done")
+    assert other.status_code == wrong_port.status_code == 403
+
+
+async def test_outside_a_codespace_a_forwarded_looking_address_is_refused(monkeypatch) -> None:
+    monkeypatch.delenv("CODESPACE_NAME", raising=False)
+    monkeypatch.delenv("GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN", raising=False)
+    async with client(f"shiny-space-xyz-{PORT}.app.github.dev") as http:
+        answer = await http.get("/act")
+
+    assert answer.status_code == 403

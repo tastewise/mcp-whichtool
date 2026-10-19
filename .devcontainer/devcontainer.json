@@ -1,0 +1,16 @@
+// "Open in GitHub Codespaces": whichtool, installed and running, with nothing on your own machine.
+// The console opens in a browser tab on its forwarded port; "Try a demo" needs no key to look around,
+// and a key typed in the page stays in that browser.
+{
+  "name": "mcp-whichtool",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "postCreateCommand": "pipx install uv && uv sync",
+  "postAttachCommand": "uv run whichtool serve --no-browser",
+  "forwardPorts": [8790],
+  "portsAttributes": {
+    "8790": { "label": "whichtool", "onAutoForward": "openBrowser" }
+  },
+  "customizations": {
+    "codespaces": { "openFiles": ["README.md"] }
+  }
+}

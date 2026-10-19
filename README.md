@@ -10,6 +10,24 @@ ones that miss, and measures the edit before you ship it.
 
 > **Status: early.** It works end to end, the interface may still change.
 
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/tastewise/mcp-whichtool?quickstart=1)
+
+![A failed test in a run's report: "Can I pick up Piranesi in Lyon today?" went to find_stores, three draws out of three, instead of check_stock](docs/images/failed.png)
+
+*A run's report: one request reached the wrong tool on every draw. Ask AI explains why and proposes a
+description; Edit the description lets you write it, then try it on that test before anything is saved.*
+
+## Try it in your browser
+
+**Open in GitHub Codespaces**, above, installs whichtool in a cloud environment and opens its console in a
+new tab: nothing to install on your machine. **Try a demo** opens the bookshop server below with its twelve
+tests; to run them, add an Anthropic or OpenAI key in the page (it stays in your browser). A Codespace runs
+on your GitHub account's free monthly quota.
+
+| Scan your server | Its tests | The guides |
+| --- | --- | --- |
+| ![The scan: drop your server's code, or give its URL](docs/images/scan.png) | ![The test library](docs/images/tests.png) | ![The Docs tab: naming and describing tools](docs/images/docs.png) |
+
 ## Try it on the demo
 
 The repository ships a small bookshop server whose descriptions are vague on purpose.

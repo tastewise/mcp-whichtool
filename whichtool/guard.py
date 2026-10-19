@@ -12,8 +12,13 @@ checks close that, for every route at once:
   browser never sends it. When an Origin is sent, it must be one of the console's.
 
 The console's own UI, the Vite dev server proxying it, and the CLI all send HEADER.
+
+In a GitHub Codespace the browser reaches the console through the address Codespaces forwards its port
+to: that one name, read from the Codespace's own variables, is accepted besides loopback, and nowhere
+else. A forwarded port is private to its Codespace's owner unless they share it.
 """
 
+import os
 from urllib.parse import urlsplit
 
 from starlette.requests import Request
@@ -30,13 +35,23 @@ def _hostname(value: str) -> str:
     return (urlsplit(f"//{value}").hostname or "").lower()
 
 
+def forwarded_host(port: int) -> str:
+    """In a GitHub Codespace, the name it forwards `port` to (`<codespace>-<port>.<domain>`); empty elsewhere."""
+    name = os.environ.get("CODESPACE_NAME", "")
+    domain = os.environ.get("GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN", "")
+    return f"{name}-{port}.{domain}".lower() if name and domain else ""
+
+
 def allowed_origins(port: int) -> set[str]:
-    return {f"http://{host}:{p}" for host in ("127.0.0.1", "localhost") for p in (port, DEV_PORT)}
+    local = {f"http://{host}:{p}" for host in ("127.0.0.1", "localhost") for p in (port, DEV_PORT)}
+    forwarded = forwarded_host(port)
+    return local | ({f"https://{forwarded}"} if forwarded else set())
 
 
 def refusal(request: Request, port: int) -> str:
     """Why this request may not reach a route; empty when it may."""
-    if _hostname(request.headers.get("host", "")) not in LOOPBACK:
+    host = _hostname(request.headers.get("host", ""))
+    if host not in LOOPBACK and not (host and host == forwarded_host(port)):
         return "the console answers only on 127.0.0.1 or localhost"
     if request.method in SAFE:
         return ""

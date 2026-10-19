@@ -3,6 +3,9 @@
 whichtool runs on your machine. There is no whichtool server: your API keys and the tools it
 scans are never sent to us, and never stored anywhere but on your own computer.
 
+In a GitHub Codespace, "your machine" is your Codespace: the cloud environment GitHub runs for your
+account. What this guide says of your computer holds there, under your GitHub account's terms.
+
 ## Your Anthropic and OpenAI keys
 
 - **Typed in the page**, a key is kept in this browser only, in its local storage. The page sends

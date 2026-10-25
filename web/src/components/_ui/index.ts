@@ -4,6 +4,7 @@ export { default as Muted } from "./Muted";
 export { default as Pre } from "./Pre";
 export { default as Footer } from "./Footer";
 export { default as Brand } from "./Brand";
+export { default as RepoLink } from "./RepoLink";
 export { default as Icon, ICON } from "./Icon";
 export { default as HelpTip } from "./HelpTip";
 export { default as Glyph, GLYPH } from "./Glyph";

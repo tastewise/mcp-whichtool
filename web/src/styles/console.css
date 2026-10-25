@@ -31,6 +31,10 @@ tw-header{display:flex; align-items:stretch; gap:34px; flex-wrap:wrap; margin-bo
 .brand h1{margin:0; font-size:19px; font-weight:600; line-height:1.3; white-space:nowrap;}
 .headerslot{display:flex; align-items:center; gap:16px; flex-wrap:wrap;
   margin-left:auto; justify-content:flex-end; padding-bottom:16px;}
+/* Last in the bar and quieter than its buttons: a way out, not an action. */
+.repolink{display:inline-flex; align-items:center; gap:7px; font-size:13px; color:var(--text-muted);
+  text-decoration:none;}
+.repolink:hover{color:var(--text-primary);}
 /* One line above the views, on the page's own ground: the way in and its URL on the
    left, you and the chain on the right. Three tiles said this in three boxes. */
 /* 10px inside a group, 26px between them: the rhythm does the grouping, so a

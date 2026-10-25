@@ -1,7 +1,8 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import * as ui from "@/components/_ui";
-import { Brand, Footer, Inline, Mono, Muted } from "@/components/_ui";
+import { Brand, Footer, Inline, Mono, Muted, RepoLink } from "@/components/_ui";
+import { REPO } from "@/components/_ui/RepoLink";
 
 describe("_ui layouts and text", () => {
   it("every export is memoised", () => {
@@ -32,5 +33,13 @@ describe("_ui layouts and text", () => {
     expect([mark.className, mark.getAttribute("src"), mark.getAttribute("alt"), mark.getAttribute("width"), mark.getAttribute("height")])
       .toEqual(["mark", "/favicon.svg", "", "24", "28"]);
     expect(brand.querySelector("h1")!.textContent).toBe("mcp-whichtool");
+  });
+  it("RepoLink points at the repository and names the package's version", () => {
+    const link = render(<RepoLink />).container.querySelector("a")!;
+    expect([link.className, link.getAttribute("href"), link.getAttribute("target")]).toEqual(["repolink", REPO, "_blank"]);
+    expect(REPO).toBe("https://github.com/tastewise/mcp-whichtool");
+    expect(link.textContent).toBe(`v${__VERSION__}`);
+    expect(__VERSION__).toMatch(/^\d+\.\d+\.\d+/);
+    expect(link.getAttribute("aria-label")).toBe(`mcp-whichtool v${__VERSION__} on GitHub`);
   });
 });

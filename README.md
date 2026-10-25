@@ -1,5 +1,12 @@
 # mcp-whichtool
 
+<p align="center">
+  <a href="pyproject.toml"><img alt="version" src="https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Ftastewise%2Fmcp-whichtool%2Fmain%2Fpyproject.toml&query=%24.project.version&label=version&color=blue"></a>
+  <a href="pyproject.toml"><img alt="python 3.11 | 3.13" src="https://img.shields.io/badge/python-3.11%20%7C%203.13-blue"></a>
+  <a href="LICENSE"><img alt="license Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
+  <a href="https://github.com/tastewise/mcp-whichtool/actions/workflows/tests.yml"><img alt="tests" src="https://github.com/tastewise/mcp-whichtool/actions/workflows/tests.yml/badge.svg?branch=main"></a>
+</p>
+
 **Does the model pick the right tool?** Tool-routing tests for your MCP server: check that
 models pick the right tool, and fix the descriptions that make them pick the wrong one.
 

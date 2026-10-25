@@ -1,5 +1,5 @@
 import { memo, type ReactNode } from "react";
-import { Brand, ICON, Inline, NavLink } from "@/components/_ui";
+import { Brand, ICON, Inline, NavLink, RepoLink } from "@/components/_ui";
 import KeysPanel from "@/features/keys/KeysPanel";
 import DemoButton from "@/features/project/DemoButton";
 
@@ -21,7 +21,7 @@ function AppHeader({ page, children }: { page: PageKey; children?: ReactNode }) 
           {item.label}
         </NavLink>)}
       </nav>
-      <Inline kind="headerslot">{children}<DemoButton /><KeysPanel /></Inline>
+      <Inline kind="headerslot">{children}<DemoButton /><KeysPanel /><RepoLink /></Inline>
     </tw-header>
   );
 }

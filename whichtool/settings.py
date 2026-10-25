@@ -16,12 +16,20 @@ FILE = "whichtool.toml"
 ENV = ".env"
 STATE = ".whichtool"
 
-# Per million tokens, from Anthropic's price list (2026-10). A [routing.prices] table overrides or
-# extends it; a model with no price shows tokens and no dollars rather than a guessed figure.
+# Per million tokens, from Anthropic's and OpenAI's price lists (2026-10). A [routing.prices] table
+# overrides or extends them; a model with no price shows tokens and no dollars rather than a guessed figure.
 CLAUDE_PRICES = {
     "claude-opus-5-5": {"input": 4.0, "output": 20.0, "cache_write": 5.0, "cache_read": 0.20},
     "claude-sonnet-5-5": {"input": 2.0, "output": 10.0, "cache_write": 2.5, "cache_read": 0.20},
     "claude-haiku-5-5": {"input": 0.10, "output": 0.50, "cache_write": 0.125, "cache_read": 0.01},
+}
+# OpenAI's standard tier, short context (a case's prompt is far under 272K tokens); a cache write at
+# the 30-minute rate, though OpenAI's automatic cache reports none.
+OPENAI_PRICES = {
+    "gpt-6-astra": {"input": 10.0, "output": 50.0, "cache_write": 12.5, "cache_read": 1.0},
+    "gpt-6.1-sol": {"input": 2.0, "output": 10.0, "cache_write": 2.5, "cache_read": 0.10},
+    "gpt-6-sol": {"input": 2.0, "output": 10.0, "cache_write": 2.5, "cache_read": 0.20},
+    "gpt-6-luna": {"input": 0.10, "output": 0.50, "cache_write": 0.125, "cache_read": 0.01},
 }
 
 STARTER = """\
@@ -91,7 +99,7 @@ def load(file: Path | None = None) -> Settings:
         table = _anchored(root, raw["routing"], ("cwd", "results", "fixture"))
         table.setdefault("cwd", str(root))
         table.setdefault("results", str(root / STATE / "results"))
-        table["prices"] = CLAUDE_PRICES | table.get("prices", {})
+        table["prices"] = CLAUDE_PRICES | OPENAI_PRICES | table.get("prices", {})
         routing = routing_spec(table, env)
     return Settings(file=path, env_file=env, routing=routing)
 

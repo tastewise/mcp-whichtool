@@ -118,7 +118,7 @@ def test_keys_land_in_the_env_file_readable_by_its_owner_only(tmp_path: Path) ->
     assert env.stat().st_mode & 0o777 == 0o600
 
 
-def test_prices_for_current_claude_models_ship_and_the_project_can_override_them(tmp_path: Path) -> None:
+def test_prices_for_current_claude_and_openai_models_ship_and_the_project_can_override_them(tmp_path: Path) -> None:
     (tmp_path / settings.FILE).write_text('[routing]\n[routing.prices.claude-opus-5-5]\ninput = 1\noutput = 2\n'
                                           'cache_write = 3\ncache_read = 4\n')
 
@@ -127,3 +127,4 @@ def test_prices_for_current_claude_models_ship_and_the_project_can_override_them
     assert loaded.routing is not None
     assert loaded.routing.prices["claude-opus-5-5"]["input"] == 1.0
     assert loaded.routing.prices["claude-haiku-5-5"]["input"] == 0.10
+    assert loaded.routing.prices["gpt-6-sol"] == {"input": 2.0, "output": 10.0, "cache_write": 2.5, "cache_read": 0.20}

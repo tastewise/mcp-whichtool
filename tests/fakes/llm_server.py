@@ -1,4 +1,4 @@
-"""A real HTTP server speaking Anthropic's Messages route and OpenAI's Chat Completions route.
+"""A real HTTP server speaking Anthropic's Messages route and OpenAI's Chat Completions and Responses routes.
 
 Not a mock of our client: the Anthropic SDK and our httpx stack talk to a socket, so the bodies,
 headers and status codes are exercised as the providers exercise them.
@@ -18,6 +18,7 @@ from tests.fakes.sockets import listening
 
 USAGE = {"input_tokens": 1000, "output_tokens": 40, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 900}
 OPENAI_USAGE = {"prompt_tokens": 1000, "completion_tokens": 40, "prompt_tokens_details": {"cached_tokens": 600}}
+RESPONSES_USAGE = {"input_tokens": 1000, "output_tokens": 40, "input_tokens_details": {"cached_tokens": 600}}
 
 
 @dataclass
@@ -27,13 +28,13 @@ class Fake:
 
 
 def _prompt(body: dict) -> str:
-    content = body["messages"][-1]["content"]
+    content = (body.get("messages") or body.get("input"))[-1]["content"]
     return content if isinstance(content, str) else " ".join(b.get("text", "") for b in content)
 
 
 def _names(path: str, body: dict) -> list[str]:
     tools = body.get("tools") or []
-    return [t["name"] if path.endswith("/messages") else t["function"]["name"] for t in tools]
+    return [t["function"]["name"] if path.endswith("/chat/completions") else t["name"] for t in tools]
 
 
 def mentioned(path: str, body: dict) -> str | None:
@@ -51,7 +52,16 @@ def openai_message(message: dict) -> dict:
             "choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant"} | message}]}
 
 
+def openai_response(output: list[dict]) -> dict:
+    return {"id": "resp_1", "object": "response", "model": "gpt", "status": "completed", "usage": RESPONSES_USAGE,
+            "output": [{"type": "reasoning", "id": "rs_1", "summary": []}] + output}
+
+
 def answer(path: str, body: dict, queued: list) -> tuple[int, dict]:
+    if path.endswith("/chat/completions") and body.get("tools"):
+        # As OpenAI answers a reasoning model offered function tools on this route.
+        return 400, {"error": {"message": "Function tools with reasoning_effort are not supported in "
+                                          "/v1/chat/completions. Use /v1/responses."}}
     anthropic = path.endswith("/messages")
     structured = "output_config" in body or "response_format" in body
     if structured:
@@ -69,9 +79,10 @@ def answer(path: str, body: dict, queued: list) -> tuple[int, dict]:
             [{"type": "text", "text": "Which one do you mean?"}]
         return 200, anthropic_message(blocks, "tool_use" if tool else "end_turn")
     if tool:
-        return 200, openai_message({"content": None, "tool_calls": [
-            {"id": "call_1", "type": "function", "function": {"name": tool, "arguments": "{}"}}]})
-    return 200, openai_message({"content": "Which one do you mean?"})
+        return 200, openai_response([{"type": "function_call", "id": "fc_1", "call_id": "call_1",
+                                      "name": tool, "arguments": "{}"}])
+    return 200, openai_response([{"type": "message", "id": "msg_1", "role": "assistant", "content": [
+        {"type": "output_text", "text": "Which one do you mean?", "annotations": []}]}])
 
 
 @contextlib.asynccontextmanager

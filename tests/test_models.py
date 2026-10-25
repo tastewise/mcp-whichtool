@@ -51,17 +51,28 @@ async def test_an_answer_in_words_is_no_pick() -> None:
     assert reply.text == "Which one do you mean?"
 
 
-async def test_openai_picks_through_tool_calls_and_its_usage_reads_in_anthropic_counters() -> None:
+async def test_openai_picks_through_the_responses_route_and_its_usage_reads_in_anthropic_counters() -> None:
     async with llm_server.serve() as fake, gpt(fake) as models:
         reply = await models.route("gpt-6-sol", TOOLS, "list_categories?", system="Be brief.")
 
     assert reply.tool == "list_categories"
+    assert fake.seen[0]["path"] == "/v1/responses"
     body = fake.seen[0]["body"]
-    assert body["messages"][0] == {"role": "system", "content": "Be brief."}
-    assert body["tools"][1]["function"]["name"] == "rank_brands"
+    assert body["instructions"] == "Be brief."
+    assert body["tools"][1] == {"type": "function", "name": "rank_brands", "description": "Rank brands.",
+                                "parameters": {"type": "object", "properties": {}}}
+    assert "tool_choice" not in body and "reasoning" not in body, "the model must route as a client runs it"
     # 1000 prompt tokens of which 600 cached: billed apart, as Anthropic's counters keep them.
     assert reply.usage == {"input_tokens": 400, "output_tokens": 40,
                            "cache_creation_input_tokens": 0, "cache_read_input_tokens": 600}
+
+
+async def test_an_answer_in_words_from_openai_is_no_pick() -> None:
+    async with llm_server.serve() as fake, gpt(fake) as models:
+        reply = await models.route("gpt-6-sol", TOOLS, "hello")
+
+    assert reply.tool is None
+    assert reply.text == "Which one do you mean?"
 
 
 async def test_a_refused_key_is_an_error_that_does_not_repeat_the_key() -> None:

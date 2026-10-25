@@ -50,13 +50,14 @@ def _usage(raw: object) -> dict[str, int]:
     return {name: int(value or 0) for name, value in found.items()}
 
 
-def _openai_usage(raw: object) -> dict[str, int]:
+def _openai_usage(raw: object, prefix: str = "prompt", out: str = "completion") -> dict[str, int]:
+    """Chat Completions counts `prompt_tokens`, Responses `input_tokens`: the same counters under two names."""
     usage = raw if isinstance(raw, dict) else {}
-    details = usage.get("prompt_tokens_details")
+    details = usage.get(f"{prefix}_tokens_details")
     cached = int((details or {}).get("cached_tokens") or 0) if isinstance(details, dict) else 0
     return {
-        "input_tokens": int(usage.get("prompt_tokens") or 0) - cached,
-        "output_tokens": int(usage.get("completion_tokens") or 0),
+        "input_tokens": int(usage.get(f"{prefix}_tokens") or 0) - cached,
+        "output_tokens": int(usage.get(f"{out}_tokens") or 0),
         "cache_creation_input_tokens": 0,
         "cache_read_input_tokens": cached,
     }
@@ -107,11 +108,11 @@ class Models:
         except anthropic.APIConnectionError as error:
             raise ModelError(f"Anthropic could not be reached: {_safe(str(error))}") from error
 
-    async def _chat(self, body: dict) -> dict:
+    async def _openai(self, route: str, body: dict) -> dict:
         if not self._openai_key:
             raise ModelError("no OpenAI key: set OPENAI_API_KEY")
         try:
-            response = await self._http.post(f"{self._openai_base}/chat/completions", json=body, timeout=self._timeout,
+            response = await self._http.post(f"{self._openai_base}/{route}", json=body, timeout=self._timeout,
                                              headers={"Authorization": f"Bearer {self._openai_key}"})
         except httpx.HTTPError as error:
             raise ModelError(f"OpenAI could not be reached: {_safe(str(error) or type(error).__name__)}") from error
@@ -124,6 +125,15 @@ class Models:
             raise ModelError(f"OpenAI answered {response.status_code}: {_safe(str(detail))}")
         try:
             payload = response.json()
+        except ValueError as error:
+            raise ModelError("OpenAI answered something other than JSON") from error
+        if not isinstance(payload, dict):
+            raise ModelError("OpenAI answered something other than JSON")
+        return payload
+
+    async def _chat(self, body: dict) -> dict:
+        payload = await self._openai("chat/completions", body)
+        try:
             message = payload["choices"][0]["message"]
         except (ValueError, KeyError, IndexError, TypeError) as error:
             raise ModelError("OpenAI answered without a message") from error
@@ -147,16 +157,19 @@ class Models:
             picked = next((b.name for b in blocks if b.type == "tool_use"), None)
             text = " ".join(b.text for b in blocks if b.type == "text")
             return Reply(tool=picked, usage=_usage(getattr(response, "usage", None)), text=text)
-        messages = ([{"role": "system", "content": system}] if system else []) + [{"role": "user", "content": prompt}]
-        answer = await self._chat({
-            "model": model, "max_completion_tokens": MAX_TOKENS, "messages": messages,
-            "tools": [{"type": "function", "function": {"name": t.name, "description": t.description,
-                                                         "parameters": t.input_schema}} for t in tools],
-        })
-        calls = answer["message"].get("tool_calls") or []
-        picked = next((c["function"]["name"] for c in calls
-                       if isinstance(c, dict) and isinstance(c.get("function"), dict)), None)
-        return Reply(tool=picked, usage=answer["usage"], text=str(answer["message"].get("content") or ""))
+        # The Responses route, not Chat Completions: there, a reasoning model is refused function tools
+        # unless its reasoning is turned off, and the eval measures the model as a client runs it.
+        body = {"model": model, "max_output_tokens": MAX_TOKENS, "input": [{"role": "user", "content": prompt}],
+                "tools": [{"type": "function", "name": t.name, "description": t.description,
+                           "parameters": t.input_schema} for t in tools]}
+        if system:
+            body["instructions"] = system
+        payload = await self._openai("responses", body)
+        items = [i for i in payload.get("output") or [] if isinstance(i, dict)]
+        picked = next((i.get("name") for i in items if i.get("type") == "function_call"), None)
+        text = " ".join(str(part.get("text") or "") for i in items if i.get("type") == "message"
+                        for part in i.get("content") or [] if isinstance(part, dict) and part.get("type") == "output_text")
+        return Reply(tool=picked, usage=_openai_usage(payload.get("usage"), "input", "output"), text=text)
 
     async def ask(self, model: str, system: str, prompt: str, schema: dict) -> tuple[dict, dict[str, int]]:
         """A JSON answer that matches `schema`, constrained by the provider rather than parsed out of prose."""

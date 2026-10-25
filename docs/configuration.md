@@ -26,7 +26,7 @@ The eval. Every key is optional.
 | `anthropic_base` | the SDK's | Another Anthropic endpoint, such as a proxy. |
 | `openai_base` | `https://api.openai.com/v1` | Another OpenAI-compatible endpoint. |
 | `default_usd_per_call` | `0.014` | The estimate for a priced model before its first run. |
-| `prices.<model>` | current Claude 5.5 models | `input`, `output`, `cache_write`, `cache_read`, in dollars per million tokens. Add OpenAI models here to see their cost. |
+| `prices.<model>` | current Claude 5.5 and GPT-6 models | `input`, `output`, `cache_write`, `cache_read`, in dollars per million tokens. Add any other model here to see its cost, or override a shipped price. |
 
 Keys: `ANTHROPIC_API_KEY` for models whose name starts with `claude-`, `OPENAI_API_KEY`
 for the others.
@@ -36,9 +36,9 @@ for the others.
 server = "http://127.0.0.1:8000/mcp"
 model = "claude-opus-5-5"
 
-[routing.prices.gpt-6-sol]   # your provider's current prices
-input = 2.5
-output = 10.0
+[routing.prices.gpt-5-mini]   # your provider's current prices
+input = 0.25
+output = 2.0
 cache_write = 0.0
-cache_read = 0.25
+cache_read = 0.025
 ```

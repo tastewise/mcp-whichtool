@@ -253,7 +253,7 @@ async def test_the_demo_opens_with_its_tools_and_its_cases_and_keeps_what_was_ch
             opened = (await page.post("/api/project/demo")).json()
             catalog = (await page.get("/api/routing/catalog")).json()
             assert opened["demo"] is True and opened["configured"] is True
-            assert len(catalog["tools"]) == 7 and len(catalog["cases"]) == 12
+            assert len(catalog["tools"]) == 7 and len(catalog["cases"]) == 13
 
             kept = catalog["cases"][:3]
             await page.put("/api/routing/catalog", json={"revision": catalog["revision"], "cases": kept})

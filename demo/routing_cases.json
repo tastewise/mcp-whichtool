@@ -7,6 +7,7 @@
   {"id": "book-price", "prompt": "How much is Dune?", "expect": "get_book"},
   {"id": "genres-list", "prompt": "Which genres do you shelve?", "expect": "list_genres"},
   {"id": "genres-section", "prompt": "Do you have a poetry section?", "expect": "list_genres"},
+  {"id": "genres-cookbooks", "prompt": "Do you sell cookbooks?", "expect": "list_genres"},
   {"id": "stock-plain", "prompt": "Is Piranesi in stock?", "expect": "check_stock"},
   {"id": "stock-pickup", "prompt": "Can I pick up Piranesi in Lyon today?", "expect": "check_stock"},
   {"id": "stores-sunday", "prompt": "Which of your shops are open on Sunday in Leeds?", "expect": "find_stores"},

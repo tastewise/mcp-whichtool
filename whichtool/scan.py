@@ -227,10 +227,10 @@ def uploaded(root: Path, uploads: Path = UPLOADS) -> bool:
 
 
 def demo(home: Path = DEMO_HOME) -> Path:
-    """The demo's project: its source and its twelve cases, copied once, so what is edited there stays."""
+    """The demo's project: its source and its thirteen cases, copied once, so what is edited there stays."""
     if not (home / settings.FILE).exists():
         home.mkdir(parents=True, exist_ok=True)
         for name in ("server.py", FIXTURE):
             shutil.copyfile(DEMO / name, home / name)
-        (home / settings.FILE).write_text(settings.starter("", "claude-opus-5-5", "."))
+        (home / settings.FILE).write_text(settings.starter("", "claude-haiku-5-5", "."))
     return home

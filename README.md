@@ -29,7 +29,7 @@ sped up.)*
 ## Try it in your browser
 
 **Open in GitHub Codespaces**, above, installs whichtool in a cloud environment and opens its console in a
-new tab: nothing to install on your machine. **Try a demo** opens the bookshop server below with its twelve
+new tab: nothing to install on your machine. **Try a demo** opens the bookshop server below with its thirteen
 tests; to run them, add an Anthropic or OpenAI key in the page (it stays in your browser). A Codespace runs
 on your GitHub account's free monthly quota.
 
@@ -47,7 +47,7 @@ uv run python demo/server.py &  # http://127.0.0.1:8000/mcp
 cd demo
 uv run whichtool keys           # your Anthropic and/or OpenAI key, kept in demo/.env
 uv run whichtool tools          # the seven tools a model will be offered
-uv run whichtool eval           # twelve cases, three draws each; asks before spending
+uv run whichtool eval           # thirteen cases, three draws each; asks before spending
 uv run whichtool serve          # the same, in the browser
 ```
 
@@ -110,17 +110,16 @@ in [Your keys and your tools](docs/guides/04-your-keys-and-your-tools.md).
 Each case is drawn N times (`-n`, default 3) per model. It **passes** when a strict
 majority of draws reach the expected tool, and it is **weak** when it passes without a
 clean sweep. A draw where the model answers in words instead of calling a tool counts as
-no pick. A run looks like this:
+no pick. A run of the demo looks like this:
 
 ```
-claude-opus-5-5  10/12 passed  ·  3 draws  ·  $0.19
-  ✗ stock-pickup  expected check_stock, got find_stores ×3
-      'Can I pick up Piranesi in Lyon today?'
-  ~ recommend-mood  2/3  recommend_books ×2, search_books ×1
+claude-haiku-5-5  12/13 passed  ·  3 draws  ·  $0.0020
+  ✗ genres-cookbooks  expected list_genres, got search_books ×3
+      'Do you sell cookbooks?'
 ```
 
 Before it spends anything, `eval` prints an estimate from the price table and the token
-counts of your previous runs.
+counts of your previous runs (or of a typical call, before the first one).
 
 ## Fixing a description
 

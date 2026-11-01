@@ -2,8 +2,9 @@
 
 Some descriptions are vague on purpose. `search_books` says almost nothing, `check_stock` and
 `find_stores` both sound like "can I get it near me", and `list_genres` never says it answers
-"do you have a section for…". Those are the cases a model is most likely to send elsewhere;
-fixing the descriptions from the console is the point of the demo.
+"do you sell cookbooks?". Those are the cases a model is most likely to send elsewhere: Claude
+Haiku 5.5 sends that one to `search_books`, which finds no "cookbooks" in a title and answers no.
+Fixing the descriptions from the console is the point of the demo.
 
     uv run --group dev python demo/server.py            # http://127.0.0.1:8000/mcp
 """

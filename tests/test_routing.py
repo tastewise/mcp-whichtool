@@ -173,10 +173,29 @@ def test_a_price_table_missing_a_key_is_no_price_not_a_wrong_number(tmp_path: Pa
     assert routing.cost(where, "claude-sonnet-5", usage) is None
 
 
-def test_the_per_call_estimate_falls_back_before_there_is_history(tmp_path: Path) -> None:
+def test_a_flat_per_call_estimate_set_in_the_project_wins_before_there_is_history(tmp_path: Path) -> None:
     where = spec(tmp_path, prices=PRICES)
 
     assert routing.per_call(where, "claude-sonnet-5") == 0.014
+
+
+def test_before_any_run_a_typical_call_is_priced_at_the_model_s_own_rates(tmp_path: Path) -> None:
+    cheap = {"claude-haiku-5": {"input": 0.10, "output": 0.50, "cache_write": 0.125, "cache_read": 0.01}}
+    where = spec(tmp_path, prices=PRICES | cheap, default_usd_per_call=None)
+
+    # 2,000 tokens in and 150 out: a cheap model's estimate is cheap, not a flat figure for every model.
+    assert routing.per_call(where, "claude-sonnet-5") == round((2000 * 3.0 + 150 * 15.0) / 1_000_000, 6)
+    assert routing.per_call(where, "claude-haiku-5") == round((2000 * 0.10 + 150 * 0.50) / 1_000_000, 6)
+
+
+def test_a_model_s_first_run_is_estimated_on_another_model_s_tokens(tmp_path: Path) -> None:
+    cheap = {"gpt-6-luna": {"input": 0.10, "output": 0.50, "cache_write": 0.125, "cache_read": 0.01}}
+    where = spec(tmp_path, prices=PRICES | cheap, default_usd_per_call=None)
+    where.results.mkdir(parents=True)
+    (where.results / "2026-09-06T10-00-00.json").write_text(json.dumps(result_json([])))
+
+    # Sonnet's run: 1M in, 1M out and 1M cache read over 9 calls, priced at luna's rates.
+    assert routing.per_call(where, "gpt-6-luna") == round((0.10 + 0.50 + 0.01) / 9, 6)
 
 
 def test_a_model_absent_from_the_price_table_has_no_per_call_estimate(tmp_path: Path) -> None:

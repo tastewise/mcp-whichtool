@@ -25,7 +25,7 @@ The eval. Every key is optional.
 | `concurrency` | `4` | Model calls in flight at once. |
 | `anthropic_base` | the SDK's | Another Anthropic endpoint, such as a proxy. |
 | `openai_base` | `https://api.openai.com/v1` | Another OpenAI-compatible endpoint. |
-| `default_usd_per_call` | `0.014` | The estimate for a priced model before its first run. |
+| `default_usd_per_call` | none | A flat estimate per call for a priced model before its first run. Unset: the model's own prices, on the tokens of another model's run, or of a typical call. |
 | `prices.<model>` | current Claude 5.5 and GPT-6 models | `input`, `output`, `cache_write`, `cache_read`, in dollars per million tokens. Add any other model here to see its cost, or override a shipped price. |
 
 Keys: `ANTHROPIC_API_KEY` for models whose name starts with `claude-`, `OPENAI_API_KEY`

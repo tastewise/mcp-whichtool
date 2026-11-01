@@ -29,7 +29,8 @@ class RoutingSpec:
     descriptions: str = "src"
     # The model the advice asks; the eval names its own.
     model: str = "claude-opus-5-5"
-    default_usd_per_call: float = 0.014
+    # A flat estimate per call before any run; None prices a typical call at the model's own rates.
+    default_usd_per_call: float | None = None
     anthropic_key: str = ""
     openai_key: str = ""
     # Empty: the SDK's own endpoint.
@@ -81,7 +82,7 @@ def routing_spec(raw: dict, env_file: Path) -> RoutingSpec:
         system=str(raw.get("system", "")),
         descriptions=str(raw.get("descriptions", "src")),
         model=str(raw.get("model", "claude-opus-5-5")),
-        default_usd_per_call=float(raw.get("default_usd_per_call", 0.014)),
+        default_usd_per_call=float(raw["default_usd_per_call"]) if "default_usd_per_call" in raw else None,
         prices={name: {k: float(v) for k, v in table.items()} for name, table in raw.get("prices", {}).items()},
         anthropic_key=secret("ANTHROPIC_API_KEY", env_file),
         openai_key=secret("OPENAI_API_KEY", env_file),

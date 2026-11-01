@@ -51,7 +51,7 @@ def test_the_demo_project_loads_and_every_case_names_a_tool_of_the_server() -> N
     assert len(declared) == 7
     cases = json.loads(spec.fixture.read_text())
     assert validate_cases(cases, set(declared)) == cases
-    assert len(routing.cases(spec)) == 12
+    assert len(routing.cases(spec)) == 13
 
 
 async def test_the_real_server_lists_its_tools_through_the_handshake(tmp_path: Path) -> None:

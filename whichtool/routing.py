@@ -191,14 +191,34 @@ def cost(spec: RoutingSpec, model: str, usage: dict[str, int]) -> float | None:
     return _priced_total(spec.prices.get(model), usage, _PRICED)
 
 
+# A call before any run: a few tools and a short prompt in, one tool call out.
+_TYPICAL_CALL = {"calls": 1, "input_tokens": 2000, "output_tokens": 150}
+
+
+def _newest_usage(spec: RoutingSpec, model: str | None) -> dict[str, int] | None:
+    """The token counts of the newest run with calls, of `model`, or of any model when None."""
+    if not spec.results.exists():
+        return None
+    for run in sorted(spec.results.glob("*.json"), reverse=True):
+        found = read(run)
+        if found and found.usage.get("calls") and (model is None or found.model == model):
+            return found.usage
+    return None
+
+
 def per_call(spec: RoutingSpec, model: str) -> float | None:
-    """The marginal cost of one call: the cache write is a one-off, never amortized into this."""
+    """The marginal cost of one call: the cache write is a one-off, never amortized into this.
+
+    Priced at `model`'s own rates, on the tokens of its newest run; before it has one, on another
+    model's (the tools and prompts are the same), then on a typical call.
+    """
     if model not in spec.prices:
         return None
-    newest = latest_for(spec, model)
-    found = read(newest) if newest else None
-    if found and found.usage.get("calls"):
-        marginal = _priced_total(spec.prices.get(model), found.usage, _MARGINAL)
-        if marginal is not None:
-            return round(marginal / found.usage["calls"], 6)
-    return spec.default_usd_per_call
+    own = _newest_usage(spec, model)
+    if own is None and spec.default_usd_per_call is not None:
+        return spec.default_usd_per_call
+    usage = own or _newest_usage(spec, None) or _TYPICAL_CALL
+    marginal = _priced_total(spec.prices.get(model), usage, _MARGINAL)
+    if marginal is None:
+        return spec.default_usd_per_call
+    return round(marginal / usage["calls"], 6)

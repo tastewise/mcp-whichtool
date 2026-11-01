@@ -74,7 +74,7 @@ scan flags them. One PR per change, squash-merged.
 | Web console | `app` (one FastAPI app behind `guard`, loopback only), `eval_routes` (run, live progress over SSE, a run's report by its id, analysis, try), `static/` (the built page) |
 | Web page | `web/` (React): the scan (the home page, which opens or switches the project), the routing page (tests written by AI and reviewed, tried as a run of the proposals with its report and logs, a failed case's analysis, hand edits tried as drafts on that case then on every case, Save to source), the test library (which tests to export) |
 | Web and terminal plumbing | `guard`, `fingerprint`, `prompts` |
-| Demo | `demo/` (a bookshop server on the official MCP SDK, twelve cases, its project file) |
+| Demo | `demo/` (a bookshop server on the official MCP SDK, thirteen cases, its project file) |
 
 ## Open points
 

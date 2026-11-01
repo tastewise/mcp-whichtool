@@ -207,6 +207,9 @@ async def test_the_tests_export_as_a_kit_for_the_server_s_own_repository(tmp_pat
     # The workflow asks for the model's provider key, from the repository's secrets; no key is in the kit.
     workflow = archive.read(".github/workflows/tool-routing.yml").decode()
     assert "OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}" in workflow and "whichtool eval --yes" in workflow
+    # It installs the release that exported it, not main.
+    from importlib.metadata import version
+    assert f"git+https://github.com/tastewise/mcp-whichtool@v{version('mcp-whichtool')} whichtool eval" in workflow
     assert all(b"sk-" not in archive.read(name) for name in archive.namelist())
 
 

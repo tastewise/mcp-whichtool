@@ -8,14 +8,16 @@ Nothing in it is a key: the workflow reads them from the repository's secrets.
 import io
 import json
 import zipfile
+from importlib.metadata import version
 
 from . import CLI, settings
 from .config import RoutingSpec
 from .models import provider_of
 from .scan import FIXTURE
 
-# Where the workflow installs the tool from, until it is on PyPI.
-SOURCE = "git+https://github.com/tastewise/mcp-whichtool"
+# Where the workflow installs the tool from, until it is on PyPI: the release that exported the kit, so a
+# change on main never reaches a repository's CI before it upgrades.
+SOURCE = f"git+https://github.com/tastewise/mcp-whichtool@v{version('mcp-whichtool')}"
 WORKFLOW = ".github/workflows/tool-routing.yml"
 README = "ROUTING-TESTS.md"
 SECRETS = {"anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}

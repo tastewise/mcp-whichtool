@@ -45,7 +45,7 @@ the tools read from the repository's source, no server needs to run in CI. With 
 The same tests run locally with the same command the workflow uses:
 
 ```sh
-uvx --from git+https://github.com/tastewise/mcp-whichtool whichtool eval
+uvx --from git+https://github.com/tastewise/mcp-whichtool@v0.1.0 whichtool eval
 ```
 
 `whichtool serve` opens them in the browser, to add tests or fix a description that loses.

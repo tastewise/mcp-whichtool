@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: A security issue
+    url: https://github.com/tastewise/mcp-whichtool/security/advisories/new
+    about: Report it privately, not as an issue.
+  - name: A question
+    url: https://github.com/tastewise/mcp-whichtool/discussions
+    about: How to write a case, why a model picks a tool, how to set up CI.

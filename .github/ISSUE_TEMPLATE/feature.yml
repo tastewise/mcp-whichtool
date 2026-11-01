@@ -1,0 +1,16 @@
+name: Idea
+description: A language to scan, a model to support, a better way to fix a description.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you are trying to do
+      description: The server, the workflow or the misroute that whichtool does not help with today.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+      description: How you picture it working, if you have an idea.

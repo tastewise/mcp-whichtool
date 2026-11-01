@@ -1,0 +1,33 @@
+name: Bug
+description: Something whichtool does wrong, or not at all.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: To reproduce
+      description: >-
+        The command or the steps in the console. If a tool or a case is involved, a small one with neutral
+        names is enough: no keys, no private source.
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The version in the console's header, or the tag you installed.
+      placeholder: v0.1.0
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python version, and the model the run used.
+      placeholder: macOS 26, Python 3.13, claude-haiku-4-5

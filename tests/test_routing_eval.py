@@ -188,3 +188,32 @@ async def test_a_draft_description_is_offered_in_place_of_the_source_s_and_writt
     assert sent["rank_retailers"] == draft and sent["rank_brands"] == "Rank brands in a category by share."
     assert json.loads(where.read_text())["drafts"] == {"rank_retailers": draft}
     assert (tmp_path / "src" / "tools.py").read_text() == before
+
+
+async def test_a_request_a_neighbour_takes_fails_and_says_it_never_reached_the_server(tmp_path: Path) -> None:
+    lost = (routing.Case(id="brands-searched", prompt="web_search the snack makers", expect="rank_brands"),
+            routing.Case(id="brands-canonical", prompt="rank_brands in snacks", expect="rank_brands"))
+    async with llm_server.serve() as fake, mcp_server.serve() as url:
+        _, (where, result) = await run(tmp_path, fake, url, draws=1, proposed=lost, neighbours=["web-search"])
+
+    offered = [tool["name"] for tool in fake.seen[0]["body"]["tools"]]
+    assert offered == ["rank_brands", "list_categories", "rank_retailers", "web_search"]
+    assert result.neighbours == {"web_search": "web-search"}
+    assert [o.id for o in result.lost_to_neighbours] == ["brands-searched"]
+    written = json.loads(where.read_text())
+    # The server's own catalogue, as before: a neighbour is never counted as one of its tools.
+    assert "web_search" not in written["tools"] and written["neighbours"] == {"web_search": "web-search"}
+
+
+async def test_without_neighbours_the_results_file_names_none(tmp_path: Path) -> None:
+    async with llm_server.serve() as fake, mcp_server.serve() as url:
+        _, (where, result) = await run(tmp_path, fake, url, draws=1)
+
+    assert "neighbours" not in json.loads(where.read_text()) and result.neighbours == {}
+    assert result.lost_to_neighbours == []
+
+
+async def test_a_draft_for_a_neighbour_s_tool_is_refused(tmp_path: Path) -> None:
+    async with llm_server.serve() as fake, mcp_server.serve() as url:
+        with pytest.raises(ValueError, match="does not offer: web_search"):
+            await run(tmp_path, fake, url, draws=1, neighbours=["web-search"], drafts={"web_search": "Search less."})

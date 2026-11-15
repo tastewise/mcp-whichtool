@@ -24,7 +24,7 @@ import httpx
 from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
-from . import routing, routing_advice, routing_eval
+from . import neighbours, routing, routing_advice, routing_eval
 from .config import RoutingSpec
 from .models import ModelError, provider_of
 
@@ -93,7 +93,8 @@ def detail(spec: RoutingSpec, where: Path) -> dict:
     return {"id": where.stem, "provider": found.provider, "model": found.model, "samples": found.samples,
             "usage": found.usage, "total": found.total, "passed": found.passed,
             "result_mtime": where.stat().st_mtime, "cost": routing.cost(spec, found.model, found.usage),
-            "cases": cases, "drafts": drafts, "proposed": bool(written.get("proposed")), "misroutes": [c for c in cases if not c["passed"]],
+            "cases": cases, "drafts": drafts, "proposed": bool(written.get("proposed")),
+            "neighbours": found.neighbours, "misroutes": [c for c in cases if not c["passed"]],
             "weak": [c for c in cases if c["passed"] and c["hits"] < found.samples]}
 
 
@@ -180,6 +181,8 @@ def install(app: FastAPI, spec: Callable[[], RoutingSpec], client: Callable[[], 
             raise HTTPException(409, problem)
         try:
             offered = await routing_eval.catalogue(settings, client())
+            # A neighbour set that does not exist, or clashes with a tool of yours, refuses the run before it starts.
+            neighbours.merged(offered, settings.neighbours)
         except ValueError as error:
             raise HTTPException(409, str(error)) from error
         unknown = sorted(set(drafts) - {tool.name for tool in offered})
@@ -203,6 +206,8 @@ def install(app: FastAPI, spec: Callable[[], RoutingSpec], client: Callable[[], 
 
         async def go() -> None:
             run.log.push(f"{model}: {len(chosen)} cases × {draws} draws against {len(offered)} tools")
+            if settings.neighbours:
+                run.log.push(f"With neighbours, another server's tools beside yours: {', '.join(settings.neighbours)}")
             if proposed is not None:
                 run.log.push("Proposed tests, not in the library yet")
             if drafts:
@@ -212,7 +217,8 @@ def install(app: FastAPI, spec: Callable[[], RoutingSpec], client: Callable[[], 
                 async with routing_eval.models_for(settings, client()) as clients:
                     _, found = await routing_eval.run(settings, clients, offered, model=model, draws=draws,
                                                       ids=[case.id for case in chosen], where=where, on_case=on_case,
-                                                      drafts=drafts, proposed=chosen if proposed is not None else None)
+                                                      drafts=drafts, proposed=chosen if proposed is not None else None,
+                                                      neighbours=settings.neighbours)
             except asyncio.CancelledError:
                 run.exit_code = STOPPED
                 run.log.push("Stopped on request.")
@@ -292,7 +298,8 @@ def install(app: FastAPI, spec: Callable[[], RoutingSpec], client: Callable[[], 
         async with ai_lock:
             try:
                 proposal = await routing_advice.suggest(settings, {
-                    "case": outcome.as_dict(), "related_cases": related, "model": settings.model})
+                    "case": outcome.as_dict(), "related_cases": related, "model": settings.model,
+                    "neighbours": sorted(set(found.neighbours.values()))})
             except asyncio.TimeoutError as error:
                 raise HTTPException(504, "AI suggestion timed out") from error
             except (RuntimeError, OSError, ValueError) as error:
@@ -315,7 +322,7 @@ def install(app: FastAPI, spec: Callable[[], RoutingSpec], client: Callable[[], 
         if problem := keys_missing(settings, model):
             raise HTTPException(409, problem)
         try:
-            offered = await routing_eval.catalogue(settings, client())
+            offered, _ = neighbours.merged(await routing_eval.catalogue(settings, client()), settings.neighbours)
             async with routing_eval.models_for(settings, client()) as clients:
                 tried = await routing_eval.try_prompts(clients, offered, model=model, draws=draws, system=settings.system,
                                                        prompts=[str(r["prompt"]) for r in rows],

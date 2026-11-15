@@ -118,6 +118,10 @@ claude-haiku-5-5  12/13 passed  ·  3 draws  ·  $0.0020
       'Do you sell cookbooks?'
 ```
 
+Your server is rarely alone in a client: `--neighbour web-search` offers a broad web
+search tool beside yours, and shows which requests it takes before they reach you (see
+[Neighbours](docs/configuration.md#neighbours)).
+
 Before it spends anything, `eval` prints an estimate from the price table and the token
 counts of your previous runs (or of a typical call, before the first one).
 
@@ -166,7 +170,7 @@ two and shows how to use each.
 | `whichtool generate` | Asks the model for test cases, added to the case list (`-t` tool, repeatable; `-y` no question) |
 | `whichtool keys` | Stores API keys in the project's `.env` (readable by you only) |
 | `whichtool tools` | Lists the tools the models are offered, and which descriptions come from your source |
-| `whichtool eval` | Runs the cases (`-m` model, repeatable; `-n` draws; `-k` filter on case ids; `-y` no question) |
+| `whichtool eval` | Runs the cases (`-m` model, repeatable; `-n` draws; `-k` filter on case ids; `--neighbour` another server's tools beside yours; `-y` no question) |
 | `whichtool results` | Shows each model's newest run again |
 | `whichtool try "prompt"` | Routes prompts that are in no case yet |
 | `whichtool serve` | Opens the console on 127.0.0.1:8790, on the scan; the tests are on `/routing` |

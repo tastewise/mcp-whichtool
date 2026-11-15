@@ -16,6 +16,7 @@ class RoutingSpec:
     `server` is the MCP endpoint whose tools/list the eval offers the model; empty, the tools come from
     the source alone. `descriptions` is the folder under `cwd` whose Python declares the tools; a
     description written there wins over the listed one, so an edit is measured before it ships.
+    `neighbours` names tool sets shipped in `whichtool.neighbours`, offered alongside the server's.
     """
 
     cwd: Path
@@ -37,6 +38,7 @@ class RoutingSpec:
     anthropic_base: str = ""
     openai_base: str = "https://api.openai.com/v1"
     concurrency: int = 4
+    neighbours: tuple[str, ...] = ()
     prices: dict[str, dict[str, float]] = field(default_factory=dict)
 
 
@@ -71,6 +73,14 @@ def resolved(raw: str) -> Path:
     return Path(raw).expanduser().resolve()
 
 
+def _names(raw: object, key: str) -> tuple[str, ...]:
+    if raw is None:
+        return ()
+    if not isinstance(raw, list) or not all(isinstance(item, str) and item.strip() for item in raw):
+        raise ValueError(f"{key} must be a list of names, like [\"web-search\"]")
+    return tuple(item.strip() for item in raw)
+
+
 def routing_spec(raw: dict, env_file: Path) -> RoutingSpec:
     cwd = resolved(str(raw.get("cwd", ".")))
     return RoutingSpec(
@@ -89,4 +99,5 @@ def routing_spec(raw: dict, env_file: Path) -> RoutingSpec:
         anthropic_base=str(raw.get("anthropic_base", "")),
         openai_base=str(raw.get("openai_base", "https://api.openai.com/v1")),
         concurrency=int(raw.get("concurrency", 4)),
+        neighbours=_names(raw.get("neighbours"), "neighbours"),
     )

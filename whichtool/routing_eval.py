@@ -18,6 +18,7 @@ from pathlib import Path
 
 import httpx
 
+from . import neighbours as neighbour_sets
 from . import routing, tools
 from .config import RoutingSpec
 from .models import COUNTERS, ModelError, Models, Reply, Tool, provider_of
@@ -123,13 +124,15 @@ async def run(spec: RoutingSpec, models: Models, offered: list[Tool], *, model: 
               ids: list[str] | None = None, where: Path | None = None, drafts: dict[str, str] | None = None,
               progress: Callable[[int, int], None] | None = None,
               on_case: Callable[[dict, int, int], None] | None = None,
-              proposed: tuple[routing.Case, ...] | None = None) -> tuple[Path, routing.Result]:
+              proposed: tuple[routing.Case, ...] | None = None,
+              neighbours: list[str] | tuple[str, ...] = ()) -> tuple[Path, routing.Result]:
     """Run the selected cases against one model, write the results file, and return it read back.
 
     `ids` runs exactly those cases; `where` names the results file before the run starts, for a caller
     that tracks the run by it; `drafts` are descriptions offered in place of the catalogue's, by tool, to
     measure one before it is saved; `on_case` hears each case as its draws complete. `proposed` runs these
-    cases in place of the library's: tests under review, not saved yet."""
+    cases in place of the library's: tests under review, not saved yet. `neighbours` names shipped tool sets
+    offered after the server's, as another server's tools would be in a client."""
     if draws < 1:
         raise ValueError("draws must be at least 1")
     chosen = proposed if proposed is not None else chosen_cases(spec, filter, ids)
@@ -143,6 +146,8 @@ async def run(spec: RoutingSpec, models: Models, offered: list[Tool], *, model: 
     if unknown_drafts:
         raise ValueError(f"a draft names a tool the server does not offer: {', '.join(unknown_drafts)}")
     offered = [replace(tool, description=drafts[tool.name]) if tool.name in drafts else tool for tool in offered]
+    names = {tool.name for tool in offered}
+    offered, origin = neighbour_sets.merged(offered, neighbours)
     started = time.time()
     total = len(chosen) * draws
     finished = 0
@@ -175,7 +180,6 @@ async def run(spec: RoutingSpec, models: Models, offered: list[Tool], *, model: 
         replies = task.result()
         _add(usage, replies)
         cases.append(scored(case, [reply.tool for reply in replies], draws))
-    names = {tool.name for tool in offered}
     where = where or routing.result_path(spec, started, model)
     where.parent.mkdir(parents=True, exist_ok=True)
     atomic_write(where, json.dumps({
@@ -185,6 +189,8 @@ async def run(spec: RoutingSpec, models: Models, offered: list[Tool], *, model: 
         "unknown": sorted({case.expect for case in chosen} - names),
         # Descriptions this run offered in place of the source's: its results describe a draft.
         **({"drafts": drafts} if drafts else {}),
+        # Other servers' tools offered alongside, by the set each came from: a pick of one never reached yours.
+        **({"neighbours": origin} if origin else {}),
         # Tests under review, not in the library: a replay sends them again rather than naming them.
         **({"proposed": True} if proposed is not None else {}),
         "usage": usage, "cases": cases,

@@ -189,7 +189,7 @@ async def test_the_tests_export_as_a_kit_for_the_server_s_own_repository(tmp_pat
     from whichtool import settings
 
     spec = replace(setup_project(tmp_path), server="https://tools.example.com/mcp", model="gpt-6-sol",
-                   openai_key="sk-xxxxxxxxxxxxtail")
+                   openai_key="sk-xxxxxxxxxxxxtail", neighbours=("web-search",))
     answer = await call(editor_app(spec), "GET", "/api/routing/export")
 
     assert answer.status_code == 200 and answer.headers["content-type"] == "application/zip"
@@ -204,6 +204,7 @@ async def test_the_tests_export_as_a_kit_for_the_server_s_own_repository(tmp_pat
     loaded = settings.load(tmp_path / "kit" / settings.FILE)
     assert loaded.routing is not None and loaded.routing.descriptions == "." and loaded.routing.model == "gpt-6-sol"
     assert loaded.routing.server == "https://tools.example.com/mcp"
+    assert loaded.routing.neighbours == ("web-search",)
     # The workflow asks for the model's provider key, from the repository's secrets; no key is in the kit.
     workflow = archive.read(".github/workflows/tool-routing.yml").decode()
     assert "OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}" in workflow and "whichtool eval --yes" in workflow

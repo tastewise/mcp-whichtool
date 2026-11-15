@@ -10,3 +10,6 @@ model = "claude-haiku-5-5"
 # by the next run, before the server reloads.
 cwd = "."
 descriptions = "."
+# A broad web search tool offered beside the bookshop's, as a client would: try
+# `whichtool eval --neighbour web-search -k cookbooks` to see whether it takes the request.
+# neighbours = ["web-search"]

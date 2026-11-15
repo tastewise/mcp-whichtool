@@ -16,6 +16,8 @@ function RunDrawer() {
   const [failedOnly, setFailedOnly] = useState(false);
   const usage = result?.usage || {};
   const rows = result ? result.cases.filter((row) => !failedOnly || !row.passed) : [];
+  const neighbours = result?.neighbours || {};
+  const sets = [...new Set(Object.values(neighbours))];
   return (
     <Drawer id="run-detail" labelledBy="run-detail-title" open={Boolean(id)} onClose={close}>
       <SecHead titleId="run-detail-title" right={<IconButton id="run-detail-close" icon={ICON.close} join={false} aria-label="Close" title="Close" autoFocus onClick={close} />}>Run details</SecHead>
@@ -29,13 +31,16 @@ function RunDrawer() {
             {result.drafts && Object.keys(result.drafts).length ? (
               <Muted as="p" className="run-drafts">{`Ran with a draft description for ${Object.keys(result.drafts).join(", ")}: the source was not changed.`}</Muted>
             ) : null}
+            {sets.length ? (
+              <Muted as="p" className="run-neighbours">{`Ran with another server's tools beside yours: ${sets.join(", ")}. A pick of one never reached your server.`}</Muted>
+            ) : null}
             <CheckLabel kind="runFilter" checked={failedOnly} onCheckedChange={setFailedOnly}>{`Failed only (${result.cases.filter((row) => !row.passed).length})`}</CheckLabel>
             <div>
               {!rows.length ? <Empty as="p">No failed prompts in this run.</Empty> : rows.map((row) => (
-                <LiveCase key={row.id} row={row} samples={result.samples} picksLabel="Draws" className="run-case live-case">
+                <LiveCase key={row.id} row={row} samples={result.samples} picksLabel="Draws" className="run-case live-case" neighbours={neighbours}>
                   {!row.passed ? (
                     <AdvicePanel cacheKey={JSON.stringify([result.id, row.id])} request={() => suggestForRun(result.id, row.id)}
-                      replay={{ caseId: row.id, model: result.model, tools: [row.expect, ...row.votes.map((vote) => vote.tool).filter((tool) => tool !== row.expect)],
+                      replay={{ caseId: row.id, model: result.model, tools: [row.expect, ...row.votes.map((vote) => vote.tool).filter((tool) => tool !== row.expect && !neighbours[tool])],
                         passed: result.cases.filter((item) => item.passed).map((item) => item.id),
                         proposed: result.proposed ? result.cases.map(({ id, prompt, expect }) => ({ id, prompt, expect })) : undefined }} />
                   ) : null}

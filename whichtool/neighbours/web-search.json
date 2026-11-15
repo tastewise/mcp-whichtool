@@ -1,0 +1,18 @@
+{
+  "name": "web-search",
+  "about": "A web search tool, as hosts and search connectors offer one: broad, and phrased to take any question about the world.",
+  "tools": [
+    {
+      "name": "web_search",
+      "description": "Search the web for current information. Use this for questions about recent events, facts, products, prices, businesses, people or anything the model may not know or that may have changed. Returns a list of results with titles, URLs and snippets.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {"type": "string", "description": "The search query."},
+          "count": {"type": "integer", "description": "How many results to return (1-20).", "default": 10}
+        },
+        "required": ["query"]
+      }
+    }
+  ]
+}

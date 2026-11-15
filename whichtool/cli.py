@@ -12,7 +12,7 @@ from pathlib import Path
 
 import httpx
 
-from . import CLI, prompts, routing, routing_advice, routing_eval, scan, settings
+from . import CLI, neighbours, prompts, routing, routing_advice, routing_eval, scan, settings
 from .config import RoutingSpec
 from .models import ModelError
 from .routing_changes import Sources, validate_cases
@@ -47,19 +47,38 @@ def _dollars(value: float | None) -> str:
     return "price unknown" if value is None else f"${value:,.2f}" if value >= 0.01 else f"${value:.4f}"
 
 
+def _tool(name: str | None, origin: dict[str, str]) -> str:
+    """A tool as a line names it: another server's is said to be one."""
+    if name is None:
+        return "no tool"
+    return f"{name} (neighbour: {origin[name]})" if name in origin else name
+
+
+def _neighboured(spec: RoutingSpec, args: argparse.Namespace) -> tuple[str, ...]:
+    """The neighbour sets a run offers: the flags', else the project file's; checked before anything is spent."""
+    names = () if args.no_neighbours else tuple(args.neighbour) if args.neighbour else spec.neighbours
+    neighbours.load(names)
+    return names
+
+
 def show(spec: RoutingSpec, where: Path, result: routing.Result) -> None:
     spent = routing.cost(spec, result.model, result.usage)
     score = f"{result.passed}/{result.total} passed"
     print(f"\n{bold(result.model)}  {score}  ·  {result.samples} draws  ·  {_dollars(spent)}  ·  {dim(str(where))}")
+    origin = result.neighbours
     for outcome in result.misroutes:
-        got = ", ".join(f"{tool} ×{n}" for tool, n in outcome.votes()) or "no tool"
+        got = ", ".join(f"{_tool(tool, origin)} ×{n}" for tool, n in outcome.votes()) or "no tool"
         print(f"  ✗ {outcome.id}  expected {outcome.expect}, got {got}")
         print(dim(f"      {outcome.prompt!r}"))
     for outcome in result.weak:
-        others = ", ".join(f"{tool} ×{n}" for tool, n in outcome.votes())
+        others = ", ".join(f"{_tool(tool, origin)} ×{n}" for tool, n in outcome.votes())
         print(f"  ~ {outcome.id}  {outcome.hits}/{result.samples}  {dim(others)}")
     if not result.misroutes and not result.weak:
         print("  every case, every draw")
+    lost = result.lost_to_neighbours
+    if lost:
+        sets = ", ".join(sorted(set(origin.values())))
+        print(f"  ! {len(lost)} of the failed cases went to a neighbour ({sets}): they never reached your server")
     unknown = json.loads(where.read_text()).get("unknown", [])
     if unknown:
         print(f"  ! cases expect tools the server does not offer: {', '.join(unknown)}")
@@ -201,6 +220,12 @@ async def _tools(spec: RoutingSpec) -> int:
         mark = dim(" (from source)") if tool.name in source else ""
         print(f"{bold(tool.name)}{mark}\n  {first[:110]}")
     print(dim(f"\n{len(offered)} tools" + (f" from {spec.server}" if spec.server else " from the source")))
+    loaded = neighbours.load(spec.neighbours)
+    for name, tool in loaded:
+        print(dim(f"{tool.name}  (neighbour: {name})"))
+    if loaded:
+        print(dim(f"{len(loaded)} neighbour tools offered alongside"))
+    print(dim(f"neighbour sets: {', '.join(neighbours.available())}  (neighbours = [...] in [routing], or --neighbour)"))
     return OK
 
 
@@ -216,7 +241,7 @@ def _estimate(spec: RoutingSpec, models: list[str], calls: int) -> str:
     return ", ".join(parts)
 
 
-async def _eval(spec: RoutingSpec, models: list[str], draws: int, filter: str) -> int:
+async def _eval(spec: RoutingSpec, models: list[str], draws: int, filter: str, sets: tuple[str, ...] = ()) -> int:
     worst = OK
     async with httpx.AsyncClient() as http:
         offered = await routing_eval.catalogue(spec, http)
@@ -227,7 +252,7 @@ async def _eval(spec: RoutingSpec, models: list[str], draws: int, filter: str) -
                         print(f"\r  {model}  {done}/{total}", end="", file=sys.stderr, flush=True)
 
                 where, result = await routing_eval.run(spec, clients, offered, model=model, draws=draws,
-                                                       filter=filter, progress=progress)
+                                                       filter=filter, progress=progress, neighbours=sets)
                 if sys.stderr.isatty():
                     print("\r\033[K", end="", file=sys.stderr)
                 show(spec, where, result)
@@ -242,15 +267,18 @@ def eval_(args: argparse.Namespace) -> int:
     chosen = routing.selects(spec, args.filter)
     if not chosen:
         return fail("no case matches that filter" if args.filter else f"no cases in {spec.fixture}")
+    sets = _neighboured(spec, args)
     calls = len(chosen) * args.draws
     print(f"{len(chosen)} cases × {args.draws} draws = {calls} calls per model  ·  "
           f"estimate: {_estimate(spec, models, calls)}")
+    if sets:
+        print(dim(f"with neighbours: {', '.join(sets)}"))
     if not args.yes:
         if not sys.stdin.isatty():
             return fail("not a terminal: pass --yes to spend without being asked")
         if not prompts.ask_yes_no("Run it?"):
             return OK
-    return asyncio.run(_eval(spec, models, args.draws, args.filter))
+    return asyncio.run(_eval(spec, models, args.draws, args.filter, sets))
 
 
 def results(args: argparse.Namespace) -> int:
@@ -272,14 +300,14 @@ def results(args: argparse.Namespace) -> int:
     return worst
 
 
-async def _try(spec: RoutingSpec, model: str, asked: list[str], draws: int) -> int:
+async def _try(spec: RoutingSpec, model: str, asked: list[str], draws: int, sets: tuple[str, ...] = ()) -> int:
     async with httpx.AsyncClient() as http:
-        offered = await routing_eval.catalogue(spec, http)
+        offered, origin = neighbours.merged(await routing_eval.catalogue(spec, http), sets)
         async with routing_eval.models_for(spec, http) as clients:
             tried = await routing_eval.try_prompts(clients, offered, model=model, prompts=asked, draws=draws,
                                                    system=spec.system, concurrency=spec.concurrency)
     for row in tried["results"]:
-        picks = ", ".join(pick or "no tool" for pick in row["picks"])
+        picks = ", ".join(_tool(pick, origin) for pick in row["picks"])
         print(f"{bold(picks)}  {dim(repr(row['prompt']))}")
         if row["said"]:
             print(dim(f"  said: {row['said'][:200]}"))
@@ -289,7 +317,7 @@ async def _try(spec: RoutingSpec, model: str, asked: list[str], draws: int) -> i
 
 def try_(args: argparse.Namespace) -> int:
     spec = _routing(settings.load(_file(args)))
-    return asyncio.run(_try(spec, args.model or spec.model, args.prompt, args.draws))
+    return asyncio.run(_try(spec, args.model or spec.model, args.prompt, args.draws, _neighboured(spec, args)))
 
 
 def serve(args: argparse.Namespace) -> int:
@@ -301,6 +329,13 @@ def serve(args: argparse.Namespace) -> int:
         # The page finds a project's tools and writes its file: nothing to set up first.
         project = None
     return app.serve(project, port=args.port, open_browser=not args.no_browser, start=Path.cwd())
+
+
+def _neighbour_flags(command: argparse.ArgumentParser) -> None:
+    command.add_argument("--neighbour", action="append", metavar="SET",
+                         help="offer another server's tools alongside yours; repeat for several "
+                              f"(default: [routing] neighbours; sets: {', '.join(neighbours.available())})")
+    command.add_argument("--no-neighbours", action="store_true", help="offer your server's tools alone")
 
 
 def parser() -> argparse.ArgumentParser:
@@ -330,6 +365,7 @@ def parser() -> argparse.ArgumentParser:
     run.add_argument("-n", "--draws", type=int, default=3, help="draws per case (default 3)")
     run.add_argument("-k", "--filter", default="", help="case ids containing this; `a or b` for several")
     run.add_argument("-y", "--yes", action="store_true", help="spend without asking")
+    _neighbour_flags(run)
     run.set_defaults(run=eval_)
 
     write = commands.add_parser("generate", help="ask the model for test cases, added to the case list")
@@ -345,6 +381,7 @@ def parser() -> argparse.ArgumentParser:
     ad_hoc.add_argument("prompt", nargs="+")
     ad_hoc.add_argument("-m", "--model")
     ad_hoc.add_argument("-n", "--draws", type=int, default=1)
+    _neighbour_flags(ad_hoc)
     ad_hoc.set_defaults(run=try_)
 
     web = commands.add_parser("serve", help="the web console, on 127.0.0.1")

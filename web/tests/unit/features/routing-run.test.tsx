@@ -111,6 +111,20 @@ describe("RunDrawer", () => {
     expect((document.querySelector("#run-detail-body textarea") as HTMLTextAreaElement).value).toContain("names a book");
     expect(screen.getByText("Proposal ready")).toBeDisabled();
   });
+
+  it("labels a pick that went to a neighbour, another server's tool", async () => {
+    const lost = { ...run, neighbours: { web_search: "web-search" }, cases: run.cases.map((row) => row.id === "recommend-from-title"
+      ? { ...row, votes: [{ tool: "web_search", count: 2 }, { tool: "recommend_books", count: 1 }], picks: ["web_search", "recommend_books", "web_search"] }
+      : row) };
+    server.use(http.get("/api/routing/runs/:id", () => HttpResponse.json(lost)));
+    renderWithQuery(<RunDrawer />);
+    act(() => useRoutingStore.setState({ runOpen: run.id }));
+    await waitFor(() => expect(document.querySelectorAll("#run-detail-body .run-case")).toHaveLength(3));
+    expect(document.querySelector("#run-detail-body .run-neighbours")!.textContent).toContain("web-search");
+    const labels = document.querySelectorAll("#run-detail-body .run-case.failed .tool-neighbour");
+    expect(labels).toHaveLength(2);
+    expect(labels[0]!.textContent).toBe(" (neighbour: web-search)");
+  });
 });
 
 describe("Fixing a failed case", () => {

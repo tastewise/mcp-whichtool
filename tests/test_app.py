@@ -311,3 +311,16 @@ async def test_tests_under_review_run_without_being_saved(tmp_path: Path) -> Non
     assert loaded.routing.fixture.read_text() == before
     assert stray.status_code == 400 and "no_such_tool" in stray.json()["detail"]
     assert twice.status_code == 400 and "share the id" in twice.json()["detail"]
+
+
+async def test_the_project_file_s_neighbours_run_from_the_page_and_its_report_names_them(tmp_path: Path) -> None:
+    async with llm_server.serve() as fake, mcp_server.serve() as url:
+        loaded = project(tmp_path, url, fake.base)
+        (tmp_path / settings.FILE).write_text(loaded.file.read_text() + 'neighbours = ["web-search"]\n')
+        async with browser(settings.load(tmp_path / settings.FILE)) as client:
+            started = await client.post("/api/routing/run", json={"draws": 1, "filter": "", "model": ""})
+            await finished(client)
+            detail = (await client.get(f"/api/routing/runs/{run_id(started)}")).json()
+
+    assert detail["neighbours"] == {"web_search": "web-search"}
+    assert "web_search" in [tool["name"] for tool in fake.seen[0]["body"]["tools"]]

@@ -128,3 +128,27 @@ def test_prices_for_current_claude_and_openai_models_ship_and_the_project_can_ov
     assert loaded.routing.prices["claude-opus-5-5"]["input"] == 1.0
     assert loaded.routing.prices["claude-haiku-5-5"]["input"] == 0.10
     assert loaded.routing.prices["gpt-6-sol"] == {"input": 2.0, "output": 10.0, "cache_write": 2.5, "cache_read": 0.20}
+
+
+async def test_eval_with_a_neighbour_says_which_failed_cases_never_reached_the_server(tmp_path: Path) -> None:
+    cases = [{"id": "brands-searched", "prompt": "web_search the snack makers", "expect": "rank_brands"}]
+    async with llm_server.serve() as fake, mcp_server.serve() as url:
+        project(tmp_path, url, fake.base, cases)
+        code, out, err = await cli(tmp_path, "eval", "--yes", "-n", "1", "--neighbour", "web-search")
+        alone, out_alone, _ = await cli(tmp_path, "eval", "--yes", "-n", "1", "--no-neighbours")
+
+    assert code == 1, err
+    assert "with neighbours: web-search" in out
+    assert "got web_search (neighbour: web-search) ×1" in out
+    assert "1 of the failed cases went to a neighbour (web-search)" in out
+    # Alone, the server's tools hold no web_search: the model answers in words, and nothing says neighbour.
+    assert alone == 1 and "got no tool" in out_alone and "(neighbour:" not in out_alone
+
+
+async def test_a_neighbour_set_that_does_not_ship_stops_the_eval_before_spending(tmp_path: Path) -> None:
+    async with llm_server.serve() as fake, mcp_server.serve() as url:
+        project(tmp_path, url, fake.base)
+        code, _, err = await cli(tmp_path, "eval", "--yes", "--neighbour", "nope")
+
+    assert code == 2 and "no neighbour named nope: web-search" in err
+    assert fake.seen == []

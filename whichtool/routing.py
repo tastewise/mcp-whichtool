@@ -3,7 +3,7 @@
 import json
 import time
 from collections import Counter
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from whichtool.config import RoutingSpec
@@ -73,6 +73,11 @@ class Outcome:
         counted = Counter(pick for pick in self.picks if pick)
         return counted.most_common()
 
+    def lost_to_neighbour(self, neighbours: dict[str, str]) -> bool:
+        """Failed, and the tool most draws chose is another server's: the request never reached yours."""
+        votes = self.votes()
+        return not self.passed and bool(votes) and votes[0][0] in neighbours
+
     def as_dict(self) -> dict[str, object]:
         return {
             "id": self.id,
@@ -91,6 +96,8 @@ class Result:
     samples: int
     usage: dict[str, int]
     outcomes: tuple[Outcome, ...]
+    # Tools offered from neighbour sets, by the set each came from: empty when the run had none.
+    neighbours: dict[str, str] = field(default_factory=dict)
 
     @property
     def misroutes(self) -> list[Outcome]:
@@ -99,6 +106,10 @@ class Result:
     @property
     def weak(self) -> list[Outcome]:
         return [o for o in self.outcomes if o.passed and o.hits < self.samples]
+
+    @property
+    def lost_to_neighbours(self) -> list[Outcome]:
+        return [o for o in self.misroutes if o.lost_to_neighbour(self.neighbours)]
 
     @property
     def total(self) -> int:
@@ -118,6 +129,7 @@ class Result:
             "passed": self.passed,
             "misroutes": [o.as_dict() for o in self.misroutes],
             "weak": [o.as_dict() for o in self.weak],
+            **({"neighbours": self.neighbours} if self.neighbours else {}),
         }
 
 
@@ -143,6 +155,7 @@ def read(path: Path) -> Result | None:
     if not isinstance(found_cases, list):
         return None
     usage_raw = found.get("usage")
+    neighbours_raw = found.get("neighbours")
     return Result(
         provider=str(found.get("provider", "")),
         model=str(found.get("model", "")),
@@ -160,6 +173,7 @@ def read(path: Path) -> Result | None:
             for c in found_cases
             if isinstance(c, dict)
         ),
+        neighbours={str(k): str(v) for k, v in neighbours_raw.items()} if isinstance(neighbours_raw, dict) else {},
     )
 
 

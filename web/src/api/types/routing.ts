@@ -11,6 +11,8 @@ export interface RunDetail {
   drafts?: Record<string, string>;
   // Tests under review, not in the library: replays send them again rather than naming them.
   proposed?: boolean;
+  // Other servers' tools offered alongside, by the neighbour set each came from.
+  neighbours?: Record<string, string>;
 }
 export interface Advice {
   verdict: "change" | "no change"; tool: string; original_description: string; suggested_description: string; diagnosis: string;

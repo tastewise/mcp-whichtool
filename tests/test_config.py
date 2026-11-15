@@ -39,3 +39,10 @@ def test_the_routing_table_reads_its_keys_from_the_env_file(tmp_path: Path, monk
     assert spec.anthropic_key == "sk-ant"
     assert spec.openai_key == ""
     assert spec.prices == {"m": {"input": 3.0}}
+
+
+def test_neighbours_are_read_as_names_and_anything_else_is_refused(tmp_path: Path) -> None:
+    assert config.routing_spec({"neighbours": ["web-search"]}, tmp_path / ".env").neighbours == ("web-search",)
+    assert config.routing_spec({}, tmp_path / ".env").neighbours == ()
+    with pytest.raises(ValueError, match="neighbours must be a list of names"):
+        config.routing_spec({"neighbours": "web-search"}, tmp_path / ".env")

@@ -24,8 +24,13 @@ SECRETS = {"anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}
 
 
 def _project_file(spec: RoutingSpec) -> str:
-    """The project file for the repository: its own source, wherever the copy the console read lived."""
-    return settings.starter(spec.server, spec.model, ".")
+    """The project file for the repository: its own source, wherever the copy the console read lived.
+
+    Its neighbours too: CI measures the run the project measures, other servers' tools included."""
+    found = settings.starter(spec.server, spec.model, ".")
+    if spec.neighbours:
+        found += f"neighbours = {json.dumps(list(spec.neighbours))}\n"
+    return found
 
 
 def _workflow(spec: RoutingSpec) -> str:

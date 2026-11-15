@@ -93,3 +93,18 @@ async def test_without_a_server_the_parameters_are_unknown_not_none(tmp_path: Pa
 
     asked = fake.seen[0]["body"]["messages"][0]["content"]
     assert "Parameters: unknown (no server listed them)" in asked and "Parameters: none" not in asked
+
+
+async def test_the_analysis_sees_the_neighbour_that_won_but_may_only_rewrite_the_server_s_tools(tmp_path: Path) -> None:
+    lost = CASE | {"votes": [{"tool": "web_search", "count": 1}], "picks": ["web_search"]}
+    keep = {"verdict": "change", "tool": "rank_retailers", "diagnosis": "Search claims it.",
+            "suggested_description": "Rank retailers: which stores carry a brand.", "rationale": "r", "risks": "none"}
+    theirs = keep | {"tool": "web_search"}
+    async with llm_server.serve([keep, theirs]) as fake, mcp_server.serve() as url:
+        found = await routing_advice.suggest(spec(tmp_path, fake, url), {"case": lost, "neighbours": ["web-search"]})
+        with pytest.raises(RuntimeError, match="does not offer: web_search"):
+            await routing_advice.suggest(spec(tmp_path, fake, url), {"case": lost, "neighbours": ["web-search"]})
+
+    assert found["tool"] == "rank_retailers"
+    asked = fake.seen[0]["body"]["messages"][0]["content"]
+    assert "Other tools the client offers beside them" in asked and "## web_search" in asked

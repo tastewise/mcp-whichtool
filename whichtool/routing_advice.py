@@ -14,6 +14,7 @@ import asyncio
 
 import httpx
 
+from . import neighbours as neighbour_sets
 from .config import RoutingSpec
 from .models import ModelError, Tool
 from .routing_eval import catalogue, models_for
@@ -99,11 +100,15 @@ def _listing(offered: list[Tool]) -> str:
     return "\n\n".join(f"## {tool.name}\n{tool.description}\nParameters: {_parameters(tool)}" for tool in offered)
 
 
-def _diagnose_prompt(offered: list[Tool], case: dict, related: list) -> str:
+def _diagnose_prompt(offered: list[Tool], case: dict, related: list, beside: list[Tool] = ()) -> str:
     votes = ", ".join(f"{v['tool']} ×{v['count']}" for v in case.get("votes", []) if isinstance(v, dict)) or "none"
     others = "\n".join(f"- {c.get('prompt', '')} → {c.get('expect', '')}" for c in related if isinstance(c, dict))
     return (
         f"The server's tools:\n\n{_listing(offered)}\n\n"
+        + (f"Other tools the client offers beside them (another server's: not yours, their descriptions cannot "
+           f"change; a request they take never reaches this server, so only this server's descriptions can win "
+           f"it back):\n\n{_listing(list(beside))}\n\n" if beside else "")
+        +
         f"A user asked:\n\n{case.get('prompt', '')}\n\n"
         f"Its test says it must reach `{case.get('expect', '')}`. The model's picks were: {votes}.\n\n"
         + (f"Other requests that must keep routing as they do:\n{others}\n\n" if others else "")
@@ -164,7 +169,9 @@ async def _answer(spec: RoutingSpec, request: dict) -> dict:
             if not isinstance(case, dict):
                 raise ValueError("a suggestion needs the case it is about")
             related = request.get("related_cases") if isinstance(request.get("related_cases"), list) else []
-            found, usage = await models.ask(model, SYSTEM, _diagnose_prompt(offered, case, related), DIAGNOSE)
+            sets = request.get("neighbours") if isinstance(request.get("neighbours"), list) else []
+            beside = [tool for _, tool in neighbour_sets.load([str(name) for name in sets])]
+            found, usage = await models.ask(model, SYSTEM, _diagnose_prompt(offered, case, related, beside), DIAGNOSE)
     known = {tool.name: tool.description for tool in offered}
     tool = str(found.get("tool", ""))
     if tool not in known:
